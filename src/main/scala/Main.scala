@@ -8,18 +8,18 @@ import sttp.tapir.json.zio.*
 import sttp.tapir.server.ziohttp.*
 import sttp.tapir.generic.auto.*
 
-import Pet.*
+import domain.*
+import engine.Lenghtener
+
 
 object Main extends ZIOAppDefault:
 
-  val petEndpoint: PublicEndpoint[Int, PetError, Pet, Any] = 
-    endpoint.get.in("pet" / path[Int]("petId")).errorOut(jsonBody[PetError]).out(jsonBody[Pet])
+  val urlsEndpoint = 
+    endpoint.get.in("urls").errorOut(stringBody).out(jsonBody[Link])
 
   val app  = 
     ZioHttpInterpreter().toHttp(
-      petEndpoint.zServerLogic(petId => 
-        if (petId == 35) ZIO.succeed(Pet("X", "localhost/x/y"))
-        else ZIO.fail(PetError("not known pet")))
+      urlsEndpoint.zServerLogic(_ => Lenghtener.dummyZIO())
     )
 
   override def run: ZIO[Any & (ZIOAppArgs & Scope), Any, Any] =
