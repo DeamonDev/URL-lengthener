@@ -4,15 +4,15 @@ import zio.*
 import domain.*
 import scala.collection.mutable.*
 
-trait Lenghtener:
+trait Lengthener:
   def dummyZIO(): ZIO[Any, ErrorResponse, Link]
 
-object Lenghtener:
+object Lengthener:
 
   def apply() =
     for {
       r <- Ref.make(Map[Link, Link]())
-    } yield new Lenghtener {
+    } yield new Lengthener {
       override def dummyZIO(): ZIO[Any, ErrorResponse, Link] =
         ZIO.succeed(Link("Hello, from ZIO!"))
     }

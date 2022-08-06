@@ -9,7 +9,7 @@ import sttp.tapir.server.ziohttp.*
 import sttp.tapir.generic.auto.*
 
 import domain.*
-import engine.Lenghtener
+import engine.Lengthener
 
 
 object Main extends ZIOAppDefault:
@@ -18,13 +18,13 @@ object Main extends ZIOAppDefault:
   val urlsEndpoint = 
     endpoint.get.in("urls").errorOut(jsonBody[ErrorResponse]).out(jsonBody[Link])
 
-  def app(lenghtener: Lenghtener)  = 
+  def app(lengthener: Lengthener)  = 
     ZioHttpInterpreter().toHttp(
-      urlsEndpoint.zServerLogic(_ => lenghtener.dummyZIO())
+      urlsEndpoint.zServerLogic(_ => lengthener.dummyZIO())
     )
 
   override def run: ZIO[Any & (ZIOAppArgs & Scope), Any, Any] =
     for {
-      lenghtener <- Lenghtener()
-      _ <- Server.start(8090, app(lenghtener)).exitCode
+      lenghtener <- Lengthener()
+      _ <- Server.start(8090, app(lenghtener) @@ Middleware.debug).exitCode
     } yield ()
