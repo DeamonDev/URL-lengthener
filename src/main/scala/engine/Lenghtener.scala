@@ -1,7 +1,18 @@
 package engine
 
-import zio.* 
+import zio.*
 import domain.*
+import scala.collection.mutable.*
 
-object Lenghtener: 
-  def dummyZIO() = ZIO.succeed(Link("simple link"))
+trait Lenghtener:
+  def dummyZIO(): ZIO[Any, ErrorResponse, Link]
+
+object Lenghtener:
+
+  def apply() =
+    for {
+      r <- Ref.make(Map[Link, Link]())
+    } yield new Lenghtener {
+      override def dummyZIO(): ZIO[Any, ErrorResponse, Link] =
+        ZIO.succeed(Link("Hello, from ZIO!"))
+    }

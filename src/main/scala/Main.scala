@@ -14,13 +14,17 @@ import engine.Lenghtener
 
 object Main extends ZIOAppDefault:
 
-  val urlsEndpoint = 
-    endpoint.get.in("urls").errorOut(stringBody).out(jsonBody[Link])
 
-  val app  = 
+  val urlsEndpoint = 
+    endpoint.get.in("urls").errorOut(jsonBody[ErrorResponse]).out(jsonBody[Link])
+
+  def app(lenghtener: Lenghtener)  = 
     ZioHttpInterpreter().toHttp(
-      urlsEndpoint.zServerLogic(_ => Lenghtener.dummyZIO())
+      urlsEndpoint.zServerLogic(_ => lenghtener.dummyZIO())
     )
 
   override def run: ZIO[Any & (ZIOAppArgs & Scope), Any, Any] =
-    Server.start(8090, app).exitCode
+    for {
+      lenghtener <- Lenghtener()
+      _ <- Server.start(8090, app(lenghtener)).exitCode
+    } yield ()
