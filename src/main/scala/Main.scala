@@ -32,6 +32,13 @@ object Main extends ZIOAppDefault:
       .errorOut(jsonBody[ErrorResponse])
       .out(jsonBody[Link])
 
+  def redirectEndpointRetriever = 
+    endpoint.get
+    .in(path[String]("uuid"))
+    .out(header[String](sttp.model.HeaderNames.Location))
+    .out(statusCode(StatusCode.apply(303)))
+    
+
   val redirect =
     endpoint.get
       .in("red")
@@ -50,7 +57,8 @@ object Main extends ZIOAppDefault:
       List(
         urlsEndpoint.zServerLogic(_ => lengthener.getLinks()),
         postLinkEndpoint.zServerLogic(link => lengthener.shortenLink(link)),
-        redirect.zServerLogic(_ => ZIO.succeed(()))
+        redirect.zServerLogic(_ => ZIO.succeed(())),
+        redirectEndpointRetriever.zServerLogic(s => ZIO.succeed("https://www.google.com"))
       ) ++ swaggerEndpoints
     )
 
