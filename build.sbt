@@ -12,7 +12,8 @@ val zio = Seq(
 val tapir = Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-core" % "1.0.3",
   "com.softwaremill.sttp.tapir" %% "tapir-json-zio" % "1.0.3",
-  "com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % "1.0.3"
+  "com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % "1.0.3",
+  "com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "1.0.3"
 )
 
 lazy val root = project
