@@ -7,12 +7,15 @@ import sttp.tapir.ztapir.*
 import sttp.tapir.json.zio.*
 import sttp.tapir.server.ziohttp.*
 import sttp.tapir.generic.auto.*
+import sttp.model.StatusCode
 
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 
 import domain.*
 import engine.Lengthener
 import sttp.tapir.server.ServerEndpoint
+import java.util.UUID
+import sttp.tapir.model.StatusCodeRange.Redirect
 
 object Main extends ZIOAppDefault:
 
@@ -20,7 +23,7 @@ object Main extends ZIOAppDefault:
     endpoint.get
       .in("urls")
       .errorOut(jsonBody[ErrorResponse])
-      .out(jsonBody[List[Link]])
+      .out(jsonBody[List[(Link, Link)]])
 
   val postLinkEndpoint =
     endpoint.post
@@ -29,7 +32,16 @@ object Main extends ZIOAppDefault:
       .errorOut(jsonBody[ErrorResponse])
       .out(jsonBody[Link])
 
-  val swaggerEndpoints = SwaggerInterpreter().fromEndpoints[Task](List(urlsEndpoint, postLinkEndpoint), "My App", "1.0")
+  val redirect =
+    endpoint.get
+      .in("red")
+      .out(
+          header(sttp.model.Header("Location", "https://www.tibia.pl/"))
+        )
+      .out(statusCode(StatusCode.apply(303)))
+
+  val swaggerEndpoints = SwaggerInterpreter()
+    .fromEndpoints[Task](List(urlsEndpoint, postLinkEndpoint), "My App", "1.0")
 
   def app_v2 = ZioHttpInterpreter().toHttp(swaggerEndpoints)
 
@@ -38,9 +50,10 @@ object Main extends ZIOAppDefault:
       List(
         urlsEndpoint.zServerLogic(_ => lengthener.getLinks()),
         postLinkEndpoint.zServerLogic(link => lengthener.shortenLink(link)),
+        redirect.zServerLogic(_ => ZIO.succeed(()))
       ) ++ swaggerEndpoints
     )
-  
+
   override def run: ZIO[Any & (ZIOAppArgs & Scope), Any, Any] =
     for {
       lenghtener <- Lengthener()
