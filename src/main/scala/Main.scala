@@ -11,16 +11,27 @@ import sttp.tapir.generic.auto.*
 import domain.*
 import engine.Lengthener
 
-
 object Main extends ZIOAppDefault:
 
+  val urlsEndpoint =
+    endpoint.get
+      .in("urls")
+      .errorOut(jsonBody[ErrorResponse])
+      .out(jsonBody[List[Link]])
 
-  val urlsEndpoint = 
-    endpoint.get.in("urls").errorOut(jsonBody[ErrorResponse]).out(jsonBody[Link])
+  val postLinkEndpoint =
+    endpoint.post
+      .in("url")
+      .in(stringBody)
+      .errorOut(jsonBody[ErrorResponse])
+      .out(jsonBody[Link])
 
-  def app(lengthener: Lengthener)  = 
+  def app(lengthener: Lengthener) =
     ZioHttpInterpreter().toHttp(
-      urlsEndpoint.zServerLogic(_ => lengthener.dummyZIO())
+      List(
+        urlsEndpoint.zServerLogic(_ => lengthener.getLinks()),
+        postLinkEndpoint.zServerLogic(link => lengthener.shortenLink(link))
+      )
     )
 
   override def run: ZIO[Any & (ZIOAppArgs & Scope), Any, Any] =
