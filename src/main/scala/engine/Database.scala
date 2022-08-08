@@ -8,7 +8,7 @@ import domain.ErrorResponse
 trait Database:
   def getAllLinks(): ZIO[Any, ErrorResponse, List[(Link, Link)]]
   def getLink(link: Link): ZIO[Any, ErrorResponse, Link]
-  def insert(link: Link): ZIO[Any, ErrorResponse, Link]
+  def insert(link: Link, newLink: Link): ZIO[Any, ErrorResponse, Link]
 
 object Database:
   def getAllLinks(): ZIO[Database, ErrorResponse, List[(Link, Link)]] =
@@ -17,8 +17,8 @@ object Database:
   def getLink(link: Link): ZIO[Database, ErrorResponse, Link] = 
     ZIO.serviceWithZIO(_.getLink(link))
 
-  def insert(link: Link): ZIO[Database, ErrorResponse, Link] =
-    ZIO.serviceWithZIO(_.insert(link))
+  def insert(link: Link, newLink: Link): ZIO[Database, ErrorResponse, Link] =
+    ZIO.serviceWithZIO(_.insert(link, newLink))
 
 class DatabaseLive(r: Ref[mutable.Map[Link, Link]]) extends Database:
   override def getAllLinks(): ZIO[Any, ErrorResponse, List[(Link, Link)]] =
@@ -34,12 +34,10 @@ class DatabaseLive(r: Ref[mutable.Map[Link, Link]]) extends Database:
       links <- r.get
     } yield links(link)
 
-  override def insert(link: Link): ZIO[Any, ErrorResponse, Link] =
+  override def insert(link: Link, newLink: Link): ZIO[Any, ErrorResponse, Link] =
     for {
-      randomText <- Random.nextUUID
-      newLink <- r.modify[Link] { m =>
-        val newLink_ = Link(s"localhost:8090/$randomText")
-        (newLink_, m + (newLink_ -> link))
+      _ <- r.modify[Unit] { m =>
+        ((), m + (newLink -> link))
       }
     } yield newLink
 

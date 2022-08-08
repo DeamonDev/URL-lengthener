@@ -9,16 +9,16 @@ trait Lengthener:
   def shortenLink(link: String): ZIO[Any, ErrorResponse, Link]
   def redirect(link: String): ZIO[Any, ErrorResponse, String]
 
-class LengthenerLive(db: Database) extends Lengthener:
+class LengthenerLive(db: Database, randomLinkGenerator: RandomLinkGenerator) extends Lengthener:
   override def getLinks(): ZIO[Any, ErrorResponse, List[(Link, Link)]] =
     db.getAllLinks()
   override def shortenLink(link: String): ZIO[Any, ErrorResponse, Link] = 
-    db.insert(Link(link.trim()))
+    randomLinkGenerator.getRandomLink().flatMap(newLink => db.insert(Link(link.trim()), newLink))
   override def redirect(link: String): ZIO[Any, ErrorResponse, String] = 
-    ZIO.succeed(println(s"[link] $link")) *> db.getLink(Link(s"localhost:8090/$link")).map(_.value)
+    db.getLink(Link(s"localhost:8090/$link")).map(_.value)
 
 object LengthenerLive:
-  def create(db: Database): LengthenerLive = LengthenerLive(db)
+  def create(db: Database, randomLinkGenerator: RandomLinkGenerator): LengthenerLive = LengthenerLive(db, randomLinkGenerator)
 
-  def layer: ZLayer[Database, ErrorResponse, Lengthener] =
+  def layer: ZLayer[Database & RandomLinkGenerator, ErrorResponse, Lengthener] =
     ZLayer.fromFunction(create)

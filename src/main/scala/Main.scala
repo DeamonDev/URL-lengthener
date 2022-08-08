@@ -16,6 +16,8 @@ import engine.Database
 import engine.DatabaseLive
 import engine.Lengthener
 import engine.LengthenerLive
+import engine.RandomLinkGenerator
+import engine.RandomLinkGeneratorLive
 import sttp.tapir.server.ServerEndpoint
 import java.util.UUID
 import sttp.tapir.model.StatusCodeRange.Redirect
@@ -55,7 +57,7 @@ object Main extends ZIOAppDefault:
       ) ++ swaggerEndpoints
     )
 
-  val appLayer = DatabaseLive.layer >>> LengthenerLive.layer
+  val appLayer = (DatabaseLive.layer ++ RandomLinkGeneratorLive.layer) >>> LengthenerLive.layer
 
   override def run =
     {for {
