@@ -46,9 +46,9 @@ object Main extends ZIOAppDefault:
     
 
   val swaggerEndpoints = SwaggerInterpreter()
-    .fromEndpoints[Task](List(urlsEndpoint, postLinkEndpoint), "My App", "1.0")
+    .fromEndpoints[Task](List(urlsEndpoint, postLinkEndpoint), "Link Lengthener", "1.0")
 
-  def app(lengthener: Lengthener) =
+  def httpApp(lengthener: Lengthener) =
     ZioHttpInterpreter().toHttp(
       List(
         urlsEndpoint.zServerLogic(_ => lengthener.getLinks()),
@@ -57,12 +57,16 @@ object Main extends ZIOAppDefault:
       ) ++ swaggerEndpoints
     )
 
-  val appLayer = (DatabaseLive.layer ++ RandomLinkGeneratorLive.layer) >>> LengthenerLive.layer
+  val programLayer = (DatabaseLive.layer ++ RandomLinkGeneratorLive.layer) >>> LengthenerLive.layer
+
+  val program = 
+    for {
+      lenghtener <- ZIO.service[Lengthener]
+      _ <- Server.start(8090, httpApp(lenghtener) @@ Middleware.debug).exitCode
+    } yield ()
 
   override def run =
-    {for {
-      lenghtener <- ZIO.service[Lengthener]
-      _ <- Server.start(8090, app(lenghtener) @@ Middleware.debug).exitCode
-    } yield ()}.provideLayer(appLayer)
+    program.provideLayer(programLayer)
+    
   
 
