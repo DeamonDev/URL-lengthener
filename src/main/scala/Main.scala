@@ -62,8 +62,8 @@ object Main extends ZIOAppDefault:
       ) ++ swaggerEndpoints
     )
 
-  override def run: ZIO[Any & (ZIOAppArgs & Scope), Any, Any] =
+  override def run =
     for {
-      lenghtener <- Lengthener()
+      lenghtener <- ZIO.service[Lengthener]
       _ <- Server.start(8090, app(lenghtener) @@ Middleware.debug).exitCode
     } yield ()
