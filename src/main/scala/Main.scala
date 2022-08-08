@@ -12,7 +12,10 @@ import sttp.model.StatusCode
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 
 import domain.*
+import engine.Database
+import engine.DatabaseLive
 import engine.Lengthener
+import engine.LengthenerLive
 import sttp.tapir.server.ServerEndpoint
 import java.util.UUID
 import sttp.tapir.model.StatusCodeRange.Redirect
@@ -37,33 +40,27 @@ object Main extends ZIOAppDefault:
     .in(path[String]("uuid"))
     .out(header[String](sttp.model.HeaderNames.Location))
     .out(statusCode(StatusCode.apply(303)))
+    .errorOut(jsonBody[ErrorResponse])
     
-
-  val redirect =
-    endpoint.get
-      .in("red")
-      .out(
-          header(sttp.model.Header("Location", "https://www.tibia.pl/"))
-        )
-      .out(statusCode(StatusCode.apply(303)))
 
   val swaggerEndpoints = SwaggerInterpreter()
     .fromEndpoints[Task](List(urlsEndpoint, postLinkEndpoint), "My App", "1.0")
-
-  def app_v2 = ZioHttpInterpreter().toHttp(swaggerEndpoints)
 
   def app(lengthener: Lengthener) =
     ZioHttpInterpreter().toHttp(
       List(
         urlsEndpoint.zServerLogic(_ => lengthener.getLinks()),
         postLinkEndpoint.zServerLogic(link => lengthener.shortenLink(link)),
-        redirect.zServerLogic(_ => ZIO.succeed(())),
-        redirectEndpointRetriever.zServerLogic(s => ZIO.succeed("https://www.google.com"))
+        redirectEndpointRetriever.zServerLogic(s => lengthener.redirect(s))
       ) ++ swaggerEndpoints
     )
 
+  val appLayer = DatabaseLive.layer >>> LengthenerLive.layer
+
   override def run =
-    for {
+    {for {
       lenghtener <- ZIO.service[Lengthener]
       _ <- Server.start(8090, app(lenghtener) @@ Middleware.debug).exitCode
-    } yield ()
+    } yield ()}.provideLayer(appLayer)
+  
+

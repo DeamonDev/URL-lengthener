@@ -7,31 +7,18 @@ import scala.collection.mutable.*
 trait Lengthener:
   def getLinks(): ZIO[Any, ErrorResponse, List[(Link, Link)]]
   def shortenLink(link: String): ZIO[Any, ErrorResponse, Link]
-  def redirect(link: String): ZIO[Any, Unit, String]
+  def redirect(link: String): ZIO[Any, ErrorResponse, String]
 
-object Lengthener:
+class LengthenerLive(db: Database) extends Lengthener:
+  override def getLinks(): ZIO[Any, ErrorResponse, List[(Link, Link)]] =
+    db.getAllLinks()
+  override def shortenLink(link: String): ZIO[Any, ErrorResponse, Link] = 
+    db.insert(Link(link.trim()))
+  override def redirect(link: String): ZIO[Any, ErrorResponse, String] = 
+    ZIO.succeed(println(s"[link] $link")) *> db.getLink(Link(s"localhost:8090/$link")).map(_.value)
 
-  def apply() =
-    for {
-      r <- Ref.make(Map[Link, Link]())
-    } yield new Lengthener {
+object LengthenerLive:
+  def create(db: Database): LengthenerLive = LengthenerLive(db)
 
-      override def getLinks(): ZIO[Any, ErrorResponse, List[(Link, Link)]] =
-        for {
-          links <- r.get
-          _ <-
-            if (links.keySet.isEmpty) ZIO.fail(ErrorResponse.EmptyLinkList)
-            else ZIO.succeed(())
-        } yield links.toList
-
-      override def shortenLink(link: String): ZIO[Any, ErrorResponse, Link] =
-        for {
-          randomText <- Random.nextUUID
-          newLink <- r.modify[Link] { m =>
-            val newLink_ = Link(s"localhost:8090/$randomText")
-            (newLink_, m + (newLink_ -> Link(s"$link")))
-          }
-        } yield newLink
-
-      override def redirect(link: String): ZIO[Any, Unit, String] = ZIO.succeed("google.com")
-    }
+  def layer: ZLayer[Database, ErrorResponse, Lengthener] =
+    ZLayer.fromFunction(create)
