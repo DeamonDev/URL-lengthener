@@ -3,7 +3,6 @@ package engine
 import zio.*
 import domain.Link
 
-
 trait RandomLinkGenerator:
   def getRandomLink(): UIO[Link]
 

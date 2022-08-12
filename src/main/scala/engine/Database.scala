@@ -10,7 +10,7 @@ trait Database:
   def getLink(link: Link): ZIO[Any, ErrorResponse, Link]
   def insert(link: Link, newLink: Link): ZIO[Any, ErrorResponse, Link]
 
-object Database:
+/* object Database:
   def getAllLinks(): ZIO[Database, ErrorResponse, List[(Link, Link)]] =
     ZIO.serviceWithZIO(_.getAllLinks())
 
@@ -18,7 +18,7 @@ object Database:
     ZIO.serviceWithZIO(_.getLink(link))
 
   def insert(link: Link, newLink: Link): ZIO[Database, ErrorResponse, Link] =
-    ZIO.serviceWithZIO(_.insert(link, newLink))
+    ZIO.serviceWithZIO(_.insert(link, newLink)) */
 
 class DatabaseLive(r: Ref[mutable.Map[Link, Link]]) extends Database:
   override def getAllLinks(): ZIO[Any, ErrorResponse, List[(Link, Link)]] =

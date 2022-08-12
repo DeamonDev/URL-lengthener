@@ -33,7 +33,7 @@ object Main extends ZIOAppDefault:
   val postLinkEndpoint =
     endpoint.post
       .in("url")
-      .in(stringBody)
+      .in(jsonBody[Link])
       .errorOut(jsonBody[ErrorResponse])
       .out(jsonBody[Link])
 
@@ -52,14 +52,14 @@ object Main extends ZIOAppDefault:
     ZioHttpInterpreter().toHttp(
       List(
         urlsEndpoint.zServerLogic(_ => lengthener.getLinks()),
-        postLinkEndpoint.zServerLogic(link => lengthener.shortenLink(link)),
+        postLinkEndpoint.zServerLogic(link => lengthener.shortenLink(link.value)),
         redirectEndpointRetriever.zServerLogic(s => lengthener.redirect(s))
       ) ++ swaggerEndpoints
     )
 
   val programLayer = (DatabaseLive.layer ++ RandomLinkGeneratorLive.layer) >>> LengthenerLive.layer
 
-  val program = 
+  val program: ZIO[Lengthener, Nothing, Unit] = 
     for {
       lenghtener <- ZIO.service[Lengthener]
       _ <- Server.start(8090, httpApp(lenghtener) @@ Middleware.debug).exitCode
