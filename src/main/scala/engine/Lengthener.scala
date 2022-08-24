@@ -15,7 +15,7 @@ class LengthenerLive(db: Database, randomLinkGenerator: RandomLinkGenerator) ext
   override def getLinks(): ZIO[Any, ErrorResponse, List[(Link, Link)]] =
     db.getAllLinks()
   override def shortenLink(link: String): ZIO[Any, ErrorResponse, Link] = 
-    randomLinkGenerator.getRandomLink().flatMap(newLink => db.insert(Link(link.trim()), newLink))
+    randomLinkGenerator.getRandomLink.flatMap(newLink => db.insert(Link(link.trim()), newLink))
   override def redirect(link: String): ZIO[Any, ErrorResponse, String] = 
     db.getLink(Link(s"localhost:8090/$link")).map(_.value)
 

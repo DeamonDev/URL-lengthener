@@ -2,7 +2,7 @@ package domain
 
 import zio.json.*
 
-case class Link(value: String)
+final case class Link(value: String)
 
 object Link:
   given linkDecoder: JsonDecoder[Link] = DeriveJsonDecoder.gen[Link]
