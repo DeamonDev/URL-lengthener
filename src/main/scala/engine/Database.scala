@@ -2,51 +2,47 @@ package engine
 
 import zio.*
 import domain.Link
-import scala.collection.mutable
+import scala.collection.immutable
 import domain.ErrorResponse
 
 trait Database:
-  def getAllLinks(): ZIO[Any, ErrorResponse, List[(Link, Link)]]
-  def getLink(link: Link): ZIO[Any, ErrorResponse, Link]
-  def insert(link: Link, newLink: Link): ZIO[Any, ErrorResponse, Link]
+  def getAllLinks: IO[ErrorResponse, List[(Link, Link)]]
+  def getLink(link: Link): IO[ErrorResponse, Link]
+  def insert(link: Link, newLink: Link): IO[ErrorResponse, Link]
 
-/* object Database:
-  def getAllLinks(): ZIO[Database, ErrorResponse, List[(Link, Link)]] =
-    ZIO.serviceWithZIO(_.getAllLinks())
-
-  def getLink(link: Link): ZIO[Database, ErrorResponse, Link] = 
-    ZIO.serviceWithZIO(_.getLink(link))
-
-  def insert(link: Link, newLink: Link): ZIO[Database, ErrorResponse, Link] =
-    ZIO.serviceWithZIO(_.insert(link, newLink)) */
-
-class DatabaseLive(r: Ref[mutable.Map[Link, Link]]) extends Database:
-  override def getAllLinks(): ZIO[Any, ErrorResponse, List[(Link, Link)]] =
+class DatabaseLive(r: Ref[immutable.Map[Link, Link]]) extends Database:
+  override val getAllLinks: IO[ErrorResponse, List[(Link, Link)]] =
     for {
       links <- r.get
       _ <-
         if (links.keySet.isEmpty) ZIO.fail(ErrorResponse.EmptyLinkList)
-        else ZIO.succeed(())
+        else ZIO.unit
     } yield links.toList
 
-  override def getLink(link: Link): ZIO[Any, ErrorResponse, Link] = 
-    for { 
+  override def getLink(link: Link): IO[ErrorResponse, Link] =
+    for {
       links <- r.get
-    } yield links(link)
+      newLink <-
+        if (links.keySet.contains(link)) ZIO.succeed(links(link))
+        else ZIO.fail(ErrorResponse.LinkDoesNotExist(link.value))
+    } yield newLink
 
-  override def insert(link: Link, newLink: Link): ZIO[Any, ErrorResponse, Link] =
+  /*   override def insert(link: Link, newLink: Link): IO[ErrorResponse, Link] =
     for {
       _ <- r.modify[Unit] { m =>
         ((), m + (newLink -> link))
       }
-    } yield newLink
+    } yield newLink */
+
+  override def insert(link: Link, newLink: Link): IO[ErrorResponse, Link] =
+    r.update { m =>
+      m + (newLink -> link)
+    }.as(newLink)
 
 object DatabaseLive:
-  def create(): ZIO[Any, ErrorResponse, Database] =
+  def create(map: immutable.Map[Link, Link]): ZIO[Any, ErrorResponse, Database] =
     for {
-      r <- Ref.make(mutable.Map[Link, Link]())
+      r <- Ref.make(map)
     } yield new DatabaseLive(r)
 
-  def layer: ZLayer[Any, ErrorResponse, Database] = ZLayer.fromZIO(create())
-
-
+  def layer: ZLayer[Any, ErrorResponse, Database] = ZLayer.fromZIO(create(immutable.Map[Link, Link]()))

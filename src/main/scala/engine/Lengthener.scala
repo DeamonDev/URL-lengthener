@@ -13,7 +13,7 @@ trait Lengthener:
 // (2)
 class LengthenerLive(db: Database, randomLinkGenerator: RandomLinkGenerator) extends Lengthener:
   override def getLinks(): ZIO[Any, ErrorResponse, List[(Link, Link)]] =
-    db.getAllLinks()
+    db.getAllLinks
   override def shortenLink(link: String): ZIO[Any, ErrorResponse, Link] = 
     randomLinkGenerator.getRandomLink.flatMap(newLink => db.insert(Link(link.trim()), newLink))
   override def redirect(link: String): ZIO[Any, ErrorResponse, String] = 
