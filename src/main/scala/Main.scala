@@ -37,36 +37,40 @@ object Main extends ZIOAppDefault:
       .errorOut(jsonBody[ErrorResponse])
       .out(jsonBody[Link])
 
-  def redirectEndpointRetriever = 
+  def redirectEndpointRetriever =
     endpoint.get
-    .in(path[String]("uuid"))
-    .out(header[String](sttp.model.HeaderNames.Location))
-    .out(statusCode(StatusCode.apply(303)))
-    .errorOut(jsonBody[ErrorResponse])
-    
+      .in(path[String]("uuid"))
+      .out(header[String](sttp.model.HeaderNames.Location))
+      .out(statusCode(StatusCode.apply(303)))
+      .errorOut(jsonBody[ErrorResponse])
 
   val swaggerEndpoints = SwaggerInterpreter()
-    .fromEndpoints[Task](List(urlsEndpoint, postLinkEndpoint), "Link Lengthener", "1.0")
+    .fromEndpoints[Task](
+      List(urlsEndpoint, postLinkEndpoint),
+      "Link Lengthener",
+      "1.0"
+    )
 
   def httpApp(lengthener: Lengthener) =
     ZioHttpInterpreter().toHttp(
       List(
-        urlsEndpoint.zServerLogic(_ => lengthener.getLinks()),
-        postLinkEndpoint.zServerLogic(link => lengthener.shortenLink(link.value)),
+        urlsEndpoint.zServerLogic(_ => lengthener.getLinks),
+        postLinkEndpoint.zServerLogic(link =>
+          lengthener.shortenLink(link.value)
+        ),
         redirectEndpointRetriever.zServerLogic(s => lengthener.redirect(s))
       ) ++ swaggerEndpoints
     )
 
-  val programLayer = (DatabaseLive.layer ++ RandomLinkGeneratorLive.layer) >>> LengthenerLive.layer
-
-  val program: ZIO[Lengthener, Nothing, Unit] = 
+  val program: ZIO[Lengthener, Nothing, Unit] =
     for {
       lenghtener <- ZIO.service[Lengthener]
       _ <- Server.start(8090, httpApp(lenghtener) @@ Middleware.debug).exitCode
     } yield ()
 
   override def run =
-    program.provideLayer(programLayer)
-    
-  
-
+    program.provide(
+      DatabaseLive.layer,
+      RandomLinkGeneratorLive.layer,
+      LengthenerLive.layer
+    )
